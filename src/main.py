@@ -32,7 +32,7 @@ dataset_n_channels = {
     'custom': 1,
 }
 default_hyperparams = {
-    'custom': {'lr': 2e-4, 'k': 512, 'hidden': 128},
+    'custom': {'lr': 2e-4, 'k': 64, 'hidden': 64},
 }
 
 
@@ -42,7 +42,7 @@ def main(args):
     parser.add_argument(
         '--test_inds', type=int, nargs='+', help='inds test participants'
     )
-    parser.add_argument('--target-size', default=100, type=int)
+    parser.add_argument('--target-size', default=260, type=int)
     parser.add_argument(
         '-j', '--workers', default=4, type=int,
         help='number of data loading workers (default: 4)'
@@ -53,14 +53,15 @@ def main(args):
     model_parser.add_argument('--model', default='vqvae',
                               choices=['vae', 'vqvae'],
                               help='autoencoder variant to use: vae | vqvae')
-    model_parser.add_argument('--batch-size', type=int, default=4,
+    model_parser.add_argument('--batch-size', type=int, default=32,
                               metavar='N',
-                              help='input batch size for training (default: 128)')
+                              help='input batch size for training (default: 32)')
     model_parser.add_argument('--hidden', type=int, metavar='N',
                               help='number of hidden channels')
     model_parser.add_argument('-k', '--dict-size', type=int, dest='k',
-                              metavar='K',
-                              help='number of atoms in dictionary')
+                              metavar='K', help='number of atoms in dictionary')
+    model_parser.add_argument('-kl', '--kl', type=int, dest='kl', default=None,
+                              help='length of vectors in embedded space')
     model_parser.add_argument('--lr', type=float, default=None,
                               help='learning rate')
     model_parser.add_argument('--vq_coef', type=float, default=None,
@@ -75,15 +76,11 @@ def main(args):
     training_parser = parser.add_argument_group('Training Parameters')
     training_parser.add_argument(
         '--dataset', default='custom',
-        choices=['mnist', 'cifar10', 'imagenet', 'coco', 'custom'],
-        help='dataset to use: mnist | cifar10 | imagenet | coco | custom'
+        choices=['custom'],
+        help='dataset to use: custom'
     )
-    training_parser.add_argument('--dataset_dir_name', default='',
-                                 help='name of the dir containing the dataset if dataset == custom')
-    training_parser.add_argument('--data-dir', default='/media/ssd/Datasets',
-                                 help='directory containing the dataset')
     training_parser.add_argument('--epochs', type=int, default=20, metavar='N',
-                                 help='number of epochs to train (default: 10)')
+                                 help='number of epochs to train (default: 20)')
     training_parser.add_argument('--max-epoch-samples', type=int, default=50000,
                                  help='max num of samples per epoch')
     training_parser.add_argument('--no-cuda', action='store_true',
@@ -127,7 +124,7 @@ def main(args):
         cudnn.benchmark = True
         torch.cuda.manual_seed(args.seed)
 
-    model = models[args.dataset][args.model](hidden, k=k,
+    model = models[args.dataset][args.model](hidden, k=k, kl=args.kl,
                                              num_channels=num_channels)
     if args.resume is not None:
         weights = torch.load(args.resume, map_location='cpu')
@@ -145,17 +142,6 @@ def main(args):
     # normlisation
     args.mean = [0.5, 0.5, 0.5]
     args.std = [0.5, 0.5, 0.5]
-
-    train_dataset = get_train_dataset(
-        args.data_dir + '/img/', args.data_dir + '/gt/',
-        args.data_dir + '/all_imgs.txt', args.test_inds,
-        trans_funcs, args.mean, args.std, args.target_size
-    )
-
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=True,
-        num_workers=args.workers, pin_memory=True, sampler=None
-    )
 
     val_dataset = get_val_dataset(
         args.data_dir + '/img/', args.data_dir + '/gt/',
@@ -175,6 +161,17 @@ def main(args):
         model.cuda()
         predict_net(model, val_loader, save_path, args)
         return
+
+    train_dataset = get_train_dataset(
+        args.data_dir + '/img/', args.data_dir + '/gt/',
+        args.data_dir + '/all_imgs.txt', args.test_inds,
+        trans_funcs, args.mean, args.std, args.target_size
+    )
+
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=True,
+        num_workers=args.workers, pin_memory=True, sampler=None
+    )
 
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)

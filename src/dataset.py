@@ -2,7 +2,6 @@ import os
 import random
 import numpy as np
 
-import torch
 from torch.utils.data import Dataset
 from torchvision import transforms as T
 from torchvision.transforms import functional as F
@@ -40,8 +39,6 @@ class TouchDataset(Dataset):
             img, gt = self.transforms(img, gt)
         img = img[0].unsqueeze(0)
         gt = gt[0].unsqueeze(0)
-        # if gt.max() > 0:
-        #     gt /= gt.max()
 
         return img, gt
 
