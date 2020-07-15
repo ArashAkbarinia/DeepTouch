@@ -13,7 +13,8 @@ The content of this zip file:
  - gt (the directory containing touch durations explored by participants)
  - img (the directory containing haptic stimuli, the map reliefs)
  - all_imgs.txt (each line corresponds to one image and ground-truth. lines are
- comma separated: <img_index>,<participant_number>,<trial_number>,<gt_index>.)
+ comma separated: 
+ <gt/img_index>,<participant_number>,<trial_number>,<stimuli_index>.)
  - gts.txt (list of png files in the gt folder)
  - imgs.txt (list of png in the img folder)
 
