@@ -16,7 +16,7 @@ from model import *
 from dataset import get_train_dataset, get_val_dataset
 
 models = {
-    'custom': {'vqvae': VQ_CVAE, 'vqvae2': VQ_CVAE},
+    'custom': {'vqvae': VQ_CVAE, 'vae': VAE},
 }
 datasets_classes = {
     'custom': datasets.ImageFolder,
@@ -41,6 +41,9 @@ def main(args):
     parser.add_argument('data_dir', help='path to training data')
     parser.add_argument(
         '--test_inds', type=int, nargs='+', help='inds test participants'
+    )
+    parser.add_argument(
+        '--test_file', type=str, help='path to a file containing test inds'
     )
     parser.add_argument('--target-size', default=260, type=int)
     parser.add_argument(
@@ -113,6 +116,10 @@ def main(args):
 
     save_path = ex_util.setup_logging_from_args(args)
     writer = SummaryWriter(save_path)
+
+    # if test file is specified use it for selecting test train sets
+    if args.test_file is not None:
+        args.test_inds = args.test_file
 
     args.inv_func = None
 
